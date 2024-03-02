@@ -1,0 +1,813 @@
+2024-02-20 10:52:53 [DEBUG] Jogadores de amostra adicionados ao banco de dados.
+2024-02-20 10:52:53 [DEBUG] Requisição GET para /players realizada.
+2024-02-20 10:52:53 [DEBUG] Status code 200 confirmado.
+2024-02-20 10:52:53 [ERROR] Erro no teste: client = <FlaskClient <Flask 'tennis_app'>>
+
+    def test_get_players_success(client):
+        # Adiciona jogadores de amostra ao banco de dados
+        add_sample_players()
+        logger.debug("Jogadores de amostra adicionados ao banco de dados.")
+    
+        # Realiza a requisição GET para a rota /players
+        response = client.get('/players')
+        logger.debug("Requisição GET para /players realizada.")
+    
+        # Verifica se o status code é 200
+        assert response.status_code == 200
+        logger.debug("Status code 200 confirmado.")
+    
+        # Prepara os dados esperados com todos os atributos considerados
+        expected_data = [
+            {'id': 1, 'name': "Player 1", 'country': "USA", 'seed': 1, 'qf_number': 5},
+            {'id': 2, 'name': "Player 2", 'country': "GBR", 'seed': 2, 'qf_number': 1}
+        ]
+    
+        # Verifica se o formato dos dados retornados é correto
+>       assert response.get_json() == expected_data
+E       AssertionError: assert [{'country': ... 1, ...}, ...] == [{'country': ...ber': 1, ...}]
+E         
+E         At index 0 diff: {'country': 'SRB', 'id': 122, 'name': 'Novak Djokovic', 'qf_number': 1, 'seed': 1, 'tournament': {'id': 1, 'name': 'Australia Open', 'short_name': 'AO', 'status': 'open', 'year': 2024}} != {'id': 1, 'name': 'Player 1', 'country': 'USA', 'seed': 1, 'qf_number': 5}
+E         Left contains 121 more items, first extra item: {'country': 'AUS', 'id': 124, 'name': 'Alexei Popyrin', 'qf_number': 1, ...}
+E         
+E         Full diff:
+E           [
+E               {...
+E         
+E         ...Full output truncated (1726 lines hidden), use '-vv' to show
+
+test_players_route.py:58: AssertionError
+2024-02-20 10:52:54 [DEBUG] Usuário de teste criado.
+2024-02-20 21:27:00 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:27:00 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:27:01 [ERROR] Erro no teste: client = <FlaskClient <Flask 'tennis_app'>>
+
+    def test_get_players_by_tournament_success(client):
+        # Realiza a requisição GET para a rota /players com short_name e year válidos
+        response = client.get('/players/OT/2024')
+        logger.debug("Requisição GET para /players/OT/2024 realizada.")
+    
+        # Verifica se o status code é 200
+        assert response.status_code == 200
+        logger.debug("Status code 200 confirmado.")
+    
+        # Obtém o torneio de amostra para comparar os dados do torneio
+        tournament = Tournament.query.filter_by(short_name="OT", year=2024).first()
+        expected_tournament_data = {
+            "id": tournament.id,
+            "name": tournament.name,
+            "short_name": tournament.short_name,
+            "year": tournament.year,
+            "status": tournament.status
+        }
+    
+        # Prepara os dados esperados com todos os atributos considerados
+        expected_data = [
+            {'id': 1, 'name': "Player 1", 'country': "USA", 'seed': 1, 'qf_number': 5, 'tournament': expected_tournament_data},
+            {'id': 2, 'name': "Player 2", 'country': "GBR", 'seed': 2, 'qf_number': 1, 'tournament': expected_tournament_data}
+        ]
+    
+        # Converte os dados retornados para JSON e verifica se são iguais aos dados esperados
+        actual_data = response.get_json()
+>       assert actual_data == expected_data
+E       AssertionError: assert [{'country': ...ber': 1, ...}] == [{'country': ...ber': 1, ...}]
+E         
+E         At index 0 diff: {'country': 'USA', 'id': 122, 'name': 'Player 1', 'qf_number': 5, 'seed': 1, 'tournament': {'id': 2, 'name': 'Open Tournament', 'short_name': 'OT', 'status': 'Scheduled', 'year': 2024}} != {'id': 1, 'name': 'Player 1', 'country': 'USA', 'seed': 1, 'qf_number': 5, 'tournament': {'id': 2, 'name': 'Open Tournament', 'short_name': 'OT', 'year': 2024, 'status': 'Scheduled'}}
+E         Use -v to get more diff
+
+test_players_route.py:72: AssertionError
+2024-02-20 21:34:46 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:34:46 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:34:46 [DEBUG] Formato dos dados retornados verificado.
+2024-02-20 21:37:20 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:37:20 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:37:20 [DEBUG] Formato dos dados retornados verificado.
+2024-02-20 21:44:27 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:44:27 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:44:27 [DEBUG] Nomes dos jogadores retornados verificados.
+2024-02-20 21:45:51 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:45:51 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:45:51 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 21:48:33 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:48:33 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:48:33 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 21:52:30 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:52:30 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:52:30 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 21:53:38 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:53:38 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:53:38 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 21:56:05 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:56:05 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:56:05 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 21:57:19 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 21:57:19 [DEBUG] Status code 200 confirmado.
+2024-02-20 21:57:19 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 22:12:03 [ERROR] Erro no teste: ImportError while importing test module 'D:\TENIS\smash_picks_backend\tennis_app\tests\test_players_route.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_players_route.py:5: in <module>
+    from tennis_app import app as flask_app
+E   ModuleNotFoundError: No module named 'tennis_app'
+2024-02-20 22:12:17 [DEBUG] Requisição GET para /players/OT/2024 realizada.
+2024-02-20 22:12:17 [DEBUG] Status code 200 confirmado.
+2024-02-20 22:12:17 [DEBUG] Nomes dos jogadores verificados com sucesso.
+2024-02-20 22:21:34 [ERROR] Erro no teste: file D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py, line 48
+  def test_tournament_not_found(client, prepare_data):
+file D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py, line 33
+  @pytest.fixture
+  def client(app):
+E       fixture 'app' not found
+>       available fixtures: cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, doctest_namespace, monkeypatch, prepare_data, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py:33
+2024-02-20 22:23:33 [ERROR] Erro no teste: file D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py, line 48
+  def test_tournament_not_found(client, prepare_data):
+file D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py, line 37
+  @pytest.fixture
+  def prepare_data(app):
+E       fixture 'app' not found
+>       available fixtures: cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, doctest_namespace, monkeypatch, prepare_data, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py:37
+2024-02-20 22:24:45 [ERROR] Erro no teste: file D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py, line 48
+  def test_tournament_not_found(client, prepare_data):
+file D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py, line 37
+  @pytest.fixture
+  def prepare_data(app):
+E       fixture 'app' not found
+>       available fixtures: cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, doctest_namespace, monkeypatch, prepare_data, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py:37
+2024-02-20 22:30:29 [ERROR] Erro no teste: ImportError while importing test module 'D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_submit_picks_route.py:4: in <module>
+    from tennis_app import app  # Substitua 'your_application' pelo nome correto do seu módulo de aplicação
+E   ModuleNotFoundError: No module named 'tennis_app'
+2024-02-20 22:31:25 [ERROR] Erro no teste: ImportError while importing test module 'D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_submit_picks_route.py:4: in <module>
+    from tennis_app import app as flask_app
+E   ModuleNotFoundError: No module named 'tennis_app'
+2024-02-20 22:34:01 [ERROR] Erro no teste: ImportError while importing test module 'D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_submit_picks_route.py:4: in <module>
+    from tennis_app import app as flask_app
+E   ModuleNotFoundError: No module named 'tennis_app'
+2024-02-20 22:35:19 [ERROR] Erro no teste: ImportError while importing test module 'D:\TENIS\smash_picks_backend\tennis_app\tests\test_submit_picks_route.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_submit_picks_route.py:4: in <module>
+    from tennis_app import app as flask_app
+E   ModuleNotFoundError: No module named 'tennis_app'
+2024-02-20 22:36:10 [ERROR] Erro no teste: self = <sqlalchemy.engine.base.Connection object at 0x000001417C49A1E0>, dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001416427BAA0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001417C9289E0>, statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001417DC23F50>
+parameters = [(None, 'OT', 2024, None)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1960: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001416427BAA0>, cursor = <sqlite3.Cursor object at 0x000001417DC3AC40>
+statement = 'INSERT INTO tournaments (name, short_name, year, status) VALUES (?, ?, ?, ?)', parameters = (None, 'OT', 2024, None)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001417C9289E0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: tournaments.name
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\default.py:924: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture
+    def prepare_data():
+        with flask_app.app_context():
+            user = User(id=1, username="testuser")
+            tournament = Tournament(short_name="OT", year=2024)
+            db.session.add(user)
+            db.session.add(tournament)
+>           db.session.commit()
+
+test_submit_picks_route.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\venv\Lib\site-packages\sqlalchemy\orm\scoping.py:597: in commit
+    return self._proxied.commit()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1972: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1257: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1232: in _prepare_impl
+    self.session.flush()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4296: in flush
+    self._flush(objects)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4431: in _flush
+    with util.safe_reraise():
+..\..\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4392: in _flush
+    flush_context.execute()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\venv\Lib\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1408: in execute
+    return meth(
+..\..\venv\Lib\site-packages\sqlalchemy\sql\elements.py:513: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1630: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1839: in _execute_context
+    return self._exec_single_context(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1979: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:2335: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1960: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001416427BAA0>, cursor = <sqlite3.Cursor object at 0x000001417DC3AC40>
+statement = 'INSERT INTO tournaments (name, short_name, year, status) VALUES (?, ?, ?, ?)', parameters = (None, 'OT', 2024, None)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001417C9289E0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: tournaments.name
+E       [SQL: INSERT INTO tournaments (name, short_name, year, status) VALUES (?, ?, ?, ?)]
+E       [parameters: (None, 'OT', 2024, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\default.py:924: IntegrityError
+2024-02-20 22:40:33 [ERROR] Erro no teste: self = <sqlalchemy.engine.base.Connection object at 0x0000015095C2EE10>, dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000150FC25A5D0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000015095C64560>, statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x0000015095C64500>
+parameters = [(1, 'testuser', None, None)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1960: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000150FC25A5D0>, cursor = <sqlite3.Cursor object at 0x0000015095BE5AC0>
+statement = 'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', parameters = (1, 'testuser', None, None)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000015095C64560>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: users.email
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\default.py:924: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture
+    def prepare_data():
+        with flask_app.app_context():
+            user = User(id=1, username="testuser")
+            # Garantir que 'name' e 'status' tenham valores válidos e não None
+            tournament = Tournament(name="Open Tournament", short_name="OT", year=2024, status="Scheduled")
+            db.session.add(user)
+            db.session.add(tournament)
+>           db.session.commit()
+
+test_submit_picks_route.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\venv\Lib\site-packages\sqlalchemy\orm\scoping.py:597: in commit
+    return self._proxied.commit()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1972: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1257: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1232: in _prepare_impl
+    self.session.flush()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4296: in flush
+    self._flush(objects)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4431: in _flush
+    with util.safe_reraise():
+..\..\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4392: in _flush
+    flush_context.execute()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\venv\Lib\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1048: in _emit_insert_statements
+    result = connection.execute(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1408: in execute
+    return meth(
+..\..\venv\Lib\site-packages\sqlalchemy\sql\elements.py:513: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1630: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1839: in _execute_context
+    return self._exec_single_context(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1979: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:2335: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1960: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000150FC25A5D0>, cursor = <sqlite3.Cursor object at 0x0000015095BE5AC0>
+statement = 'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', parameters = (1, 'testuser', None, None)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000015095C64560>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: users.email
+E       [SQL: INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)]
+E       [parameters: (1, 'testuser', None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\default.py:924: IntegrityError
+2024-02-21 10:39:43 [ERROR] Erro no teste: self = <sqlalchemy.engine.base.Connection object at 0x000001AA0994A8A0>, dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA71304E00>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0994BF50>, statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0994BEC0>
+parameters = [(1, 'testuser', 'testuser@example.com', 'hashed_password')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1960: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA71304E00>, cursor = <sqlite3.Cursor object at 0x000001AA099805C0>
+statement = 'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', parameters = (1, 'testuser', 'testuser@example.com', 'hashed_password')
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0994BF50>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: UNIQUE constraint failed: users.id
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\default.py:924: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture
+    def prepare_data():
+        with flask_app.app_context():
+            # Assegure que 'email' e 'password_hash' tenham valores válidos e não None
+            user = User(id=1, username="testuser", email="testuser@example.com", password_hash="hashed_password")
+            # Supondo que você tenha um torneio para adicionar também
+            tournament = Tournament(name="Open Tournament", short_name="OT", year=2024, status="Scheduled")
+            db.session.add(user)
+            db.session.add(tournament)
+>           db.session.commit()
+
+test_submit_picks_route.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+..\..\venv\Lib\site-packages\sqlalchemy\orm\scoping.py:597: in commit
+    return self._proxied.commit()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1972: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1257: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:1232: in _prepare_impl
+    self.session.flush()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4296: in flush
+    self._flush(objects)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4431: in _flush
+    with util.safe_reraise():
+..\..\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\session.py:4392: in _flush
+    flush_context.execute()
+..\..\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\venv\Lib\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1048: in _emit_insert_statements
+    result = connection.execute(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1408: in execute
+    return meth(
+..\..\venv\Lib\site-packages\sqlalchemy\sql\elements.py:513: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1630: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1839: in _execute_context
+    return self._exec_single_context(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1979: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:2335: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\venv\Lib\site-packages\sqlalchemy\engine\base.py:1960: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA71304E00>, cursor = <sqlite3.Cursor object at 0x000001AA099805C0>
+statement = 'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', parameters = (1, 'testuser', 'testuser@example.com', 'hashed_password')
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0994BF50>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: users.id
+E       [SQL: INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)]
+E       [parameters: (1, 'testuser', 'testuser@example.com', 'hashed_password')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\venv\Lib\site-packages\sqlalchemy\engine\default.py:924: IntegrityError

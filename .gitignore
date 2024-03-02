@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches de testes
+.pytest_cache/
+
+# Pastas de ambiente virtual
+venv/
+
+# Arquivos de configuração do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Pastas de distribuição
+build/
+dist/
+*.egg-info/
+
+# Arquivos de banco de dados SQLite
+*.sqlite3
+
+# Arquivos de log
+*.log
+
+# Se você não quiser compartilhar as migrações, descomente a linha abaixo
+#migrations/
