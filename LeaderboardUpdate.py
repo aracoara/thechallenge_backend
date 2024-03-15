@@ -13,7 +13,16 @@ tournament_year = 2024
 base_path = f'tennis_app/assets/{tournament_short_name}{tournament_year}'
 os.makedirs(base_path, exist_ok=True)
 
-tournament_stages = ["R1", "R2", "R3", "R4", "QF", "SF", "F", "Champion"]
+tournament_stages = [
+                    "R1", 
+                    "R2", 
+                    "R3", 
+                    "R4", 
+                    "QF", 
+                    # "SF", 
+                    # "F", 
+                    # "Champion"
+                    ]
 weights = {"QF": 1, "SF": 2, "F": 3, "Champion": 4}
 
 # Carrega os picks dos usuários uma única vez
@@ -49,8 +58,8 @@ for stage in tournament_stages:
 
 ## if __name__ == '__main__':
     # Supondo que Leaderboard_df seja um DataFrame válido
-    update_leaderboard_data(Leaderboard_df)
-    print("Pontuações atualizadas com sucesso!")
+    # update_leaderboard_data(Leaderboard_df)
+    # print("Pontuações atualizadas com sucesso!")
 
 ###############################################################
     

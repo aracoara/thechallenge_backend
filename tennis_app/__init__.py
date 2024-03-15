@@ -15,18 +15,20 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 # app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # Por exemplo, 1 hora
 # csrf = CSRFProtect(app)
 
-CORS(app, supports_credentials=True, origins="*")
+CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+    # response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    # response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Expose-Headers', 'Content-Type,Authorization,X-Requested-With,Access-Control-Allow-Origin')
+    # response.headers.add('Access-Control-Expose-Headers', 'Content-Type,Authorization,X-Requested-With,Access-Control-Allow-Origin')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smash_picks.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///thechallenge.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = True  # Habilita logs do SQL para debug
 bcrypt = Bcrypt(app)
 
 ## Configuração para usar o MailHog

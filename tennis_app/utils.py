@@ -8,140 +8,10 @@ from sqlalchemy.orm import joinedload  # Para carregamento otimizado das relaç�
 from flask_mail import Message
 from tennis_app import mail
 from contextlib import contextmanager
+import json
 
 
 
-# Função para criar jogos de QF
-def create_qf_games(data):
-    quartasFinal = data.get('quartasFinal', {})
-    semiFinal = data.get('semiFinal', {})
-    qf_games = []
-
-    # Mapeamento dos jogos de QF para SF corrigido para incluir ambas as entradas de jogadores
-    for qf_key1, qf_key2, sf_key in [('QF1', 'QF2', 'SF1'), ('QF3', 'QF4', 'SF2'), ('QF5', 'QF6', 'SF3'), ('QF7', 'QF8', 'SF4')]:
-        # Certifica-se que as chaves existem antes de tentar acessá-las para evitar KeyErrors
-        if qf_key1 in quartasFinal and qf_key2 in quartasFinal and sf_key in semiFinal:
-            player1_id = quartasFinal[qf_key1]
-            player2_id = quartasFinal[qf_key2]
-            winner_id = semiFinal[sf_key]
-
-            qf_games.append({
-                "round": str(RoundType.QF),
-                "player1_id": player1_id,
-                "player2_id": player2_id,
-                "winner_id": winner_id,
-            })
-
-    return qf_games
-
-
-# Exemplo de uso
-# qf_games = create_qf_games(data)
-# print(qf_games)
-
-# Função para criar jogos de SF
-def create_sf_games(data):
-    semiFinal = data.get('semiFinal', {})
-    final = data.get('final', {})
-    sf_games = []
-
-    # Mapeamento dos jogos de SF para F ajustado para incluir ambas as entradas de jogadores
-    for sf_key1, sf_key2, f_key in [('SF1', 'SF2', 'F1'), ('SF3', 'SF4', 'F2')]:
-        # Certifica-se que as chaves existem antes de tentar acessá-las para evitar KeyErrors
-        if sf_key1 in semiFinal and sf_key2 in semiFinal and f_key in final:
-            player1_id = semiFinal[sf_key1]
-            player2_id = semiFinal[sf_key2]
-            # O vencedor é determinado pela chave correspondente em 'final'
-            winner_id = final[f_key]
-
-            sf_games.append({
-                "round": str(RoundType.SF),
-                "player1_id": player1_id,
-                "player2_id": player2_id,
-                "winner_id": winner_id
-            })
-
-    return sf_games
-
-
-# Exemplo de uso
-# sf_games = create_sf_games(data)
-# print(sf_games)
-
-# Função para criar o jogo final e identificar o campeão
-def create_final_game_and_champion(data):
-    final_games = []
-
-    # Identificar os jogadores da final e o campeão
-    player1_key = 'F1'
-    player2_key = 'F2'
-    player1_id = data["final"][player1_key]
-    player2_id = data["final"][player2_key]
-    champion_id = data["campeao"]
-
-    round_enum = RoundType.F
-
-    # Criar o jogo final
-    final_game = {
-        "round": round_enum,
-        "player1_id": player1_id,
-        "player2_id": player2_id,
-        "winner_id": champion_id  # O campeão é o vencedor do jogo final
-    }
-    final_games.append(final_game)
-
-    return final_games
-
-def create_all_games(data):
-    all_games = []
-    # Mapeamento dos jogos de QF para SF e de SF para F
-    next_round_mapping = {
-        'QF1': 'SF1', 'QF2': 'SF1',
-        'QF3': 'SF2', 'QF4': 'SF2',
-        'QF5': 'SF3', 'QF6': 'SF3',
-        'QF7': 'SF4', 'QF8': 'SF4',
-        'SF1': 'F1', 'SF2': 'F1',
-        'SF3': 'F2', 'SF4': 'F2'
-    }
-
-    # Criar jogos para quartas de final e semifinal
-    for round_key in ['quartasFinal', 'semiFinal']:
-        round_data = data[round_key]
-        sorted_keys = sorted(round_data.keys())
-        
-        for i in range(0, len(sorted_keys), 2):
-            key1 = sorted_keys[i]
-            key2 = sorted_keys[i + 1] if i + 1 < len(sorted_keys) else None
-
-            player1_id = round_data[key1]
-            player2_id = round_data[key2] if key2 else None
-            winner_id = data["semiFinal"][next_round_mapping[key1]] if round_key == 'quartasFinal' else data["final"][next_round_mapping[key1]]
-
-            round_enum = RoundType.QF if round_key == 'quartasFinal' else RoundType.SF
-            
-            all_games.append({
-                "round": str(round_enum),
-                "player1_id": player1_id,
-                "player2_id": player2_id,
-                "winner_id": winner_id,
-                "tournament_id": data['tournament_id']
-            })
-
-    # Criar jogo final
-    player1_id = data["final"]['F1']
-    player2_id = data["final"]['F2']
-    champion_id = data["campeao"]
-
-    final_game = {
-        "round": str(RoundType.F),
-        "player1_id": player1_id,
-        "player2_id": player2_id,
-        "winner_id": champion_id,
-        "tournament_id": data['tournament_id']
-    }
-    all_games.append(final_game)
-
-    return all_games
 
 @contextmanager
 def session_scope():
@@ -153,75 +23,6 @@ def session_scope():
         db.session.rollback()
         raise e
 
-def delete_existing_games():
-    """Apaga jogos e picks existentes."""
-    Game.query.delete()
-    # Pick.query.delete()  # Descomente se também quiser apagar os picks
-    print("Jogos e Picks existentes apagados.")
-
-def create_and_save_games(all_games):
-    """Cria e salva novos jogos no banco de dados."""
-    games_created = []
-    for game_data in all_games:
-        game = Game(
-            round=game_data['round'],
-            player1_id=game_data['player1_id'],
-            player2_id=game_data['player2_id'],
-            winner_id=game_data.get('winner_id'),
-            tournament_id=game_data['tournament_id']
-        )
-        db.session.add(game)
-        games_created.append(game)
-    db.session.flush()  # Prepara os objetos de jogo para obter IDs
-    print(f"Jogos criados com sucesso: {len(games_created)} jogos")
-
-def create_or_update_picks(user, games):
-    """Verifica e cria/atualiza previsões."""
-    for game in games:
-        # Busca por um Pick existente
-        pick = Pick.query.filter_by(user_id=user.id, game_id=game.id).first()
-
-        # Se o Pick não existir, cria um novo
-        if not pick:
-            pick = Pick(
-                user_id=user.id,
-                game_id=game.id,
-                winner_id=game.winner_id,
-                player1_id=game.player1_id,
-                player2_id=game.player2_id,
-                round=game.round,
-                tournament_id=game.tournament_id  # Assumindo que 'game' tem um atributo 'tournament_id'
-            )
-            db.session.add(pick)
-        else:
-            # Atualiza o Pick existente
-            pick.winner_id = game.winner_id
-            pick.player1_id = game.player1_id
-            pick.player2_id = game.player2_id
-            # Não é necessário atualizar tournament_id para um Pick existente, assumindo que um jogo não muda de torneio.
-            # No entanto, se for possível mudar, descomente a linha abaixo.
-            pick.tournament_id = game.tournament_id
-        
-        print(f"Pick {(pick.id if pick.id else 'novo')} criado/atualizado com sucesso.")
-    
-    # db.session.commit()  # Confirma as mudanças no banco de dados após processar todos os jogos.
-
-
-def process_games_and_picks(data):
-    """Processa jogos e previsões."""
-    with app.app_context():
-        user_id = data.get('user_id')
-        user = User.query.get(user_id)
-        if not user:
-            print(f"Usuário com ID {user_id} não encontrado.")
-            return
-
-        all_games = create_all_games(data)
-        with session_scope():
-            delete_existing_games()
-            create_and_save_games(all_games)
-            create_or_update_picks(user, Game.query.all())
-        print("Processamento de jogos e picks concluído com sucesso.")
 
 # Função para processar o arquivo de resultados
 def process_results_data(file_path):
@@ -246,21 +47,6 @@ def process_results_data(file_path):
 
     return player_ids
 
-# Função para obter todos os picks
-def get_all_picks():
-    with app.app_context():
-        picks = Pick.query.all()
-        picks_df = pd.DataFrame([{
-            "id": pick.id,
-            "user_id": pick.user_id,
-            "game_id": pick.game_id,
-            "player1_id": pick.player1_id,
-            "player2_id": pick.player2_id,
-            "round": pick.round,
-            "winner_id": pick.winner_id
-            # Inclua outros campos conforme necessário
-        } for pick in picks])
-        return picks_df
 
 
 # Método para atualizar os resultados do torneio
@@ -322,104 +108,46 @@ def picks_por_usuario(picks_user):
 
 def gatherFormattedTournamentPicks(tournament_short_name, tournament_year):
     with app.app_context():
-        # Buscando o torneio pelo nome e ano
         tournament = Tournament.query.filter_by(short_name=tournament_short_name, year=tournament_year).first()
-        if not tournament:
-            print("Torneio não encontrado.")
-            return
 
-        # Filtrar as picks para o tournament_id especificado, pré-carregando as relações necessárias
-        picks = Pick.query.filter_by(tournament_id=tournament.id) \
-                          .options(joinedload(Pick.game)) \
-                          .all()
+        if tournament:
+            picks = Pick.query.filter_by(tournament_id=tournament.id) \
+                                .options(joinedload(Pick.game)) \
+                                .all()
 
-        # Formatando os resultados para criação de um DataFrame
-        picks_data = []
-        for pick in picks:
-            picks_data.extend([
-                {
-                    "user_id": pick.user_id,
-                    "Jogador": pick.player1_id,
-                    "Rodada": str(pick.round),
-                    "tournament_id": pick.tournament_id
-                },
-                {
-                    "user_id": pick.user_id,
-                    "Jogador": pick.player2_id,
-                    "Rodada": str(pick.round),
-                    "tournament_id": pick.tournament_id
-                }
-            ])
+            # Função para transformar a posição para apenas QF, SF, F, Champion
+            def transform_position(position):
+                if 'QF' in position:
+                    return 'QF'
+                elif 'SF' in position:
+                    return 'SF'
+                elif 'F' in position:
+                    return 'F'
+                elif 'Champion' in position:
+                    return 'Champion'
+                return position  # Caso padrão, retorna a posição como está
+
+            picks_data = [{
+                "user_id": pick.user_id,
+                "Jogador": pick.player_id,
+                "Rodada": transform_position(pick.position),  # Aplica a transformação aqui
+                "tournament_id": pick.tournament_id
+            } for pick in picks]
+
+            df_picks = pd.DataFrame(picks_data)
+
+            df_picks_por_usuario_temp = df_picks.copy()
+            df_picks_por_usuario = df_picks_por_usuario_temp.drop_duplicates()
+
+            ordem_rodadas = {"QF": 1, "SF": 2, "F": 3, "Champion": 4}
+            df_picks_por_usuario['OrdemRodada'] = df_picks_por_usuario['Rodada'].map(ordem_rodadas)
             
-            # Lógica para adicionar o pick de champion
-            # print(f"Processando pick: {pick.id}, round: {pick.round}")
-            if pick.round.value == 'F':
-                # print("Adicionando campeão...")
-                champion_id = pick.winner_id  # Certifique-se de que este é o atributo correto
-                if champion_id:  # Verificação adicional para garantir que champion_id não é None
-                    picks_data.append({
-                        "user_id": pick.user_id,
-                        "Jogador": champion_id,
-                        "Rodada": "Champion",
-                        "tournament_id": pick.tournament_id
-                    })
-                else:
-                    print("Atenção: champion_id é None para a pick de ID:", pick.id)
-
-        # Criando o DataFrame
-        df_picks_por_usuario_temp = pd.DataFrame(picks_data)
-        df_picks_por_usuario = df_picks_por_usuario_temp.copy().drop_duplicates()
-
-        # Mapeamento para a ordenação das rodadas
-        ordem_rodadas = {"QF": 1, "SF": 2, "F": 3, "Champion": 4}
-        df_picks_por_usuario['OrdemRodada'] = df_picks_por_usuario['Rodada'].map(ordem_rodadas)
-        df_picks_por_usuario.sort_values(by=['user_id', 'tournament_id', 'OrdemRodada', 'Jogador'], inplace=True)
-
-        # Removendo a coluna auxiliar 'OrdemRodada'
-        df_picks_por_usuario.drop('OrdemRodada', axis=1, inplace=True)
+            df_picks_por_usuario.sort_values(by=['user_id', 'tournament_id', 'OrdemRodada', 'Jogador'], inplace=True)
+            df_picks_por_usuario.drop('OrdemRodada', axis=1, inplace=True)
 
         return df_picks_por_usuario
 
 
-
-# def gatherFormattedTournamentPicks():
-#     with app.app_context():
-#         # Buscando todos os picks e pré-carregando as relações necessárias para evitar N+1 queries
-#         picks = Pick.query.options(joinedload(Pick.game)).all()
-
-#         # Formatando os resultados diretamente em uma estrutura adequada para criar um DataFrame
-#         picks_data = [
-#             {
-#                 "user_id": pick.user_id,
-#                 "Jogador": pick.player1_id,
-#                 "Rodada": str(pick.round),
-#                 "tournament_id": pick.tournament_id
-#             }
-#             for pick in picks
-#         ] + [
-#             {
-#                 "user_id": pick.user_id,
-#                 "Jogador": pick.player2_id,
-#                 "Rodada": str(pick.round),
-#                 "tournament_id": pick.tournament_id
-#             }
-#             for pick in picks
-#         ]
-
-#         # Se necessário, adicione lógica para picks do vencedor final
-
-#         # Criando o DataFrame
-#         df_picks_por_usuario = pd.DataFrame(picks_data)
-
-#         # Mapeamento para a ordenação das rodadas
-#         ordem_rodadas = {"QF": 1, "SF": 2, "F": 3, "Champion": 4}
-#         df_picks_por_usuario['OrdemRodada'] = df_picks_por_usuario['Rodada'].map(ordem_rodadas)
-#         df_picks_por_usuario.sort_values(by=['user_id', 'tournament_id', 'Jogador', 'OrdemRodada'], inplace=True)
-
-#         # Removendo a coluna auxiliar 'OrdemRodada'
-#         df_picks_por_usuario.drop('OrdemRodada', axis=1, inplace=True)
-
-#         return df_picks_por_usuario
 
 def trackTournamentEliminations(df_picks_por_usuario, atualizacoes):
     # Criar um dicionário para os classificados de cada rodada
@@ -465,48 +193,6 @@ def trackTournamentEliminations(df_picks_por_usuario, atualizacoes):
     df_players_eliminated.drop('OrdemRodada', axis=1, inplace=True)
 
     return df_players_eliminated
-
-# def trackTournamentEliminations(df_picks_por_usuario, atualizacoes):
-#     # Criar um dicionário para os classificados de cada rodada
-#     classificados_dict = dict(atualizacoes)
-
-#     # Obter uma lista única de (user_id, player_id, tournament_id) a partir de df_picks_por_usuario
-#     users_picks_players = df_picks_por_usuario[['user_id', 'Jogador', 'tournament_id']].drop_duplicates()
-
-#     # Preparar uma lista para armazenar os dados dos jogadores eliminados
-#     players_eliminated_data = []
-
-#     # Iterar pela lista de palpites dos usuários
-#     for _, row in users_picks_players.iterrows():
-#         user_id = row['user_id']
-#         player_id = row['Jogador']
-#         tournament_id = row['tournament_id']
-
-#         # Verificar se o jogador foi eliminado em alguma rodada
-#         for i in range(len(atualizacoes) - 1):
-#             rodada_atual = atualizacoes[i][0]
-#             rodada_seguinte = atualizacoes[i + 1][0]
-
-#             classificados_atual = classificados_dict[rodada_atual]
-#             classificados_seguinte = classificados_dict.get(rodada_seguinte, set())
-
-#             if player_id in classificados_atual and player_id not in classificados_seguinte:
-#                 # Para a rodada 'Champion', a eliminação é marcada na rodada anterior
-#                 rodada_eliminacao = 'Champion' if rodada_seguinte == 'Champion' else rodada_atual
-#                 players_eliminated_data.append((user_id, rodada_eliminacao, player_id, tournament_id))
-
-#     # Converter a lista para um DataFrame
-#     df_players_eliminated = pd.DataFrame(players_eliminated_data, columns=['user_id', 'Rodada_Eliminacao', 'Jogador', 'tournament_id'])
-
-#     # Ordenar o DataFrame
-#     ordem_rodadas = {"R1": 1, "R2": 2, "R3": 3, "QF": 4, "SF": 5, "F": 6, "Champion": 7}
-#     df_players_eliminated['OrdemRodada'] = df_players_eliminated['Rodada_Eliminacao'].map(ordem_rodadas)
-#     df_players_eliminated.sort_values(by=['user_id', 'tournament_id', 'OrdemRodada', 'Jogador'], inplace=True)
-
-#     # Remover a coluna auxiliar 'OrdemRodada'
-#     df_players_eliminated.drop('OrdemRodada', axis=1, inplace=True)
-
-#     return df_players_eliminated
 
 # Método para determinar os picks válidos dos usuários
 def compileValidTournamentPicks(picks_user_df, df_eliminados, atualizacoes):
@@ -573,6 +259,23 @@ def compileValidTournamentPicks(picks_user_df, df_eliminados, atualizacoes):
 
     return df_picks_valid
 
+# Método para obter os dados dos usuários
+def get_user_data():
+    with app.app_context():
+        # Dentro deste bloco, você está no contexto da aplicação
+        # Agora você pode realizar consultas ao banco de dados
+        user_data = [
+            {
+                "user_id": user.id,  # Ajuste feito aqui
+                "username": user.username,
+            }
+            for user in User.query.all()
+        ]
+
+        # Aqui não é mais necessário especificar as colunas, pois os dicionários já têm as chaves corretas
+        df_user_data = pd.DataFrame(user_data)
+
+        return df_user_data
 
 def calculatePossiblePointsByTournament(df_picks_valid, weights, RoundUpdates):
     """
@@ -702,147 +405,6 @@ def mergePossibleAndEarnedPoints(possible_points_df, earned_points_df, latest_ro
 
 
 
-
-# def mergePossibleAndEarnedPoints(possible_points_df, earned_points_df, latest_round):
-#     """
-#     Merge the possible and earned points DataFrames, ensuring that if the earned_points_df is empty,
-#     the merge still occurs and 'Pontos Ganhos' are filled with 0.
-#     """
-#     # Garantir que as colunas estejam nomeadas consistentemente para o merge
-#     if 'username' in possible_points_df.columns:
-#         possible_points_df.rename(columns={'username': 'Participante'}, inplace=True)
-#     if 'username' in earned_points_df.columns:
-#         earned_points_df.rename(columns={'username': 'Participante'}, inplace=True)
-
-#     # Definir a ordem das colunas desejada para o DataFrame final
-#     column_order = ['Participante', 'tournament_id', 'Pontos Possíveis', 'Pontos Ganhos', 'Rodada']
-
-#     # Preparar o DataFrame final com a estrutura de colunas desejada, preenchendo com valores padrão
-#     final_df = pd.DataFrame(columns=column_order)
-#     final_df['Pontos Possíveis'] = possible_points_df['Pontos Possíveis']
-#     final_df['Participante'] = possible_points_df['Participante']
-#     final_df['tournament_id'] = possible_points_df['tournament_id']
-#     final_df['Rodada'] = latest_round
-#     final_df['Pontos Ganhos'] = 0  # Predefinir 'Pontos Ganhos' com 0
-
-#     # Se earned_points_df não estiver vazio, fazer o merge
-#     if not earned_points_df.empty:
-#         # Merge dos DataFrames com base em 'Participante' e 'tournament_id'
-#         merged_df = pd.merge(possible_points_df[['Participante', 'tournament_id', 'Pontos Possíveis']],
-#                              earned_points_df[['Participante', 'tournament_id', 'Pontos Ganhos']],
-#                              on=['Participante', 'tournament_id'],
-#                              how='left')
-
-#         # Atualizar 'Pontos Ganhos' após o merge, preenchendo valores nulos com 0
-#         merged_df['Pontos Ganhos'].fillna(0, inplace=True)
-#         merged_df['Rodada'] = latest_round  # Atualizar a coluna 'Rodada' para a última rodada disponível
-
-#         # Atualizar final_df com os dados mesclados
-#         final_df = merged_df
-
-#     # Certificar-se de que todas as colunas estão na ordem desejada
-#     final_df = final_df[column_order]
-
-#     return final_df
-
-
-
-
-
-# Método para obter todos os picks
-def get_picks():
-    with app.app_context():
-        # Buscando todos os picks e pré-carregando as relações necessárias para evitar N+1 queries
-        picks = Pick.query.options(joinedload(Pick.game)).all()
-        
-        # Formatando os resultados em uma lista de dicionários
-        picks_user = [
-            {
-                "user_id": pick.user_id,
-                "player1_id": pick.player1_id,
-                "player2_id": pick.player2_id,
-                "winner_id": pick.winner_id,
-                "round": str(pick.round),
-                "tournament_id": pick.tournament_id
-            }
-            for pick in picks
-        ]
-        
-        return picks_user
-    
-## Método para obter todos os IDs dos jogadores
-def get_player_ids():
-    with app.app_context():
-        # Dentro deste bloco, você está no contexto da aplicação
-        # Agora você pode realizar consultas ao banco de dados
-        player_ids = [player.id for player in Player.query.with_entities(Player.id).all()]
-
-        return player_ids
-    
-# Método para obter os dados dos usuários
-def get_user_data():
-    with app.app_context():
-        # Dentro deste bloco, você está no contexto da aplicação
-        # Agora você pode realizar consultas ao banco de dados
-        user_data = [
-            {
-                "user_id": user.id,  # Ajuste feito aqui
-                "username": user.username,
-            }
-            for user in User.query.all()
-        ]
-
-        # Aqui não é mais necessário especificar as colunas, pois os dicionários já têm as chaves corretas
-        df_user_data = pd.DataFrame(user_data)
-
-        return df_user_data
-
-# Método para obter os picks processados    
-def get_and_process_picks():
-    with app.app_context():
-        # Inicia a sessão do SQLAlchemy
-        session = db.session
-
-        users = User.query.all()
-        processed_picks_list = []
-
-        for user in users:
-            user_picks_dict = {
-                'User': user.username,
-                'QF1': None, 'QF2': None, 'QF3': None, 'QF4': None,
-                'QF5': None, 'QF6': None, 'QF7': None, 'QF8': None,
-                'SF1': None, 'SF2': None, 'SF3': None, 'SF4': None,
-                'F1': None, 'F2': None, 'Champion': None
-            }
-
-            for pick in user.picks:
-                # Busca os nomes dos jogadores a partir dos IDs usando a sessão do SQLAlchemy
-                player1 = session.get(Player, pick.player1_id) if pick.player1_id else None
-                player2 = session.get(Player, pick.player2_id) if pick.player2_id else None
-                winner = session.get(Player, pick.winner_id) if pick.winner_id else None
-                
-                round_key = pick.round.name if hasattr(pick.round, 'name') else str(pick.round)
-                # Mapeia os nomes dos jogadores para as fases correspondentes
-                if round_key.startswith('QF'):
-                    user_picks_dict[f'QF{2*(pick.game_id-1)+1}'] = player1.name if player1 else None
-                    user_picks_dict[f'QF{2*(pick.game_id-1)+2}'] = player2.name if player2 else None
-                elif round_key.startswith('SF'):
-                    # Corrige o mapeamento para SF1 e SF2 baseando-se no game_id 5
-                    if pick.game_id == 5:
-                        user_picks_dict['SF1'] = player1.name if player1 else None
-                        user_picks_dict['SF2'] = player2.name if player2 else None
-                    # Corrige o mapeamento para SF3 e SF4 baseando-se no game_id 6
-                    elif pick.game_id == 6:
-                        user_picks_dict['SF3'] = player1.name if player1 else None
-                        user_picks_dict['SF4'] = player2.name if player2 else None
-                elif round_key == 'F' and pick.game_id == 7:
-                    user_picks_dict['F1'] = player1.name if player1 else None
-                    user_picks_dict['F2'] = player2.name if player2 else None
-                    user_picks_dict['Champion'] = winner.name if winner else None
-
-            processed_picks_list.append(user_picks_dict)
-        
-        return pd.DataFrame(processed_picks_list)
 
 # Método para mapear IDs de jogadores para nomes
 def map_ids_to_names(player_ids):
@@ -996,3 +558,69 @@ def send_email(subject, recipient, template):
     msg = Message(subject, recipients=[recipient])
     msg.body = template
     mail.send(msg)
+
+# Ajuste essas funções para receberem diretamente o dicionário, não uma string
+def extract_picks_with_game_id(data, user_id, tournament_id):
+    # Mapeamento de position para game_id
+    position_to_game_id_map = {
+        "QF1": 1, "QF2": 1, "QF3": 2, "QF4": 2,
+        "QF5": 3, "QF6": 3, "QF7": 4, "QF8": 4,
+        "SF1": 5, "SF2": 5, "SF3": 6, "SF4": 6,
+        "F1": 7, "F2": 7, "Champion": 7
+    }
+
+    picks_list = []
+
+    # Agora 'data' é assumido como sendo um dicionário diretamente
+    rounds = {**data["quartasFinal"], **data["semiFinal"], **data["final"], "Champion": data["campeao"]}
+
+    for position, player_id in rounds.items():
+        game_id = position_to_game_id_map.get(position)
+        pick = Pick(
+            position=position,
+            player_id=int(player_id),
+            game_id=game_id,
+            user_id=user_id,
+            tournament_id=tournament_id
+        )
+        db.session.add(pick)
+    
+    return picks_list
+
+def process_picks_and_generate_games(data, user_id, tournament_id):
+    game_id_to_round_id = {
+        1: 5, 2: 5, 3: 5, 4: 5,
+        5: 6, 6: 6, 7: 7
+    }
+
+    games_data = []
+
+    rounds = {
+        **data["quartasFinal"], **data["semiFinal"], **data["final"], "Champion": data["campeao"]
+    }
+
+    # Mapeamento de posições para identificar os players de cada jogo e o vencedor
+    game_definitions = [
+        ('QF1', 'QF2', 'SF1'), ('QF3', 'QF4', 'SF2'), ('QF5', 'QF6', 'SF3'), ('QF7', 'QF8', 'SF4'),
+        ('SF1', 'SF2', 'F1'), ('SF3', 'SF4', 'F2'), ('F1', 'F2', 'Champion')
+    ]
+
+    for index, (player1_pos, player2_pos, winner_pos) in enumerate(game_definitions, start=1):
+        game = {
+            "round_id": game_id_to_round_id[index],
+            "player1_id": int(rounds[player1_pos]),
+            "player2_id": int(rounds[player2_pos]),
+            "winner_id": int(rounds[winner_pos]) if winner_pos in rounds else None,
+            "user_id": user_id,
+            "tournament_id": tournament_id
+        }
+        games_data.append(game)
+    
+    return games_data
+
+def get_user_name_by_id(user_id):
+    user = User.query.get(user_id)
+    return user.username if user else "Unknown User"
+def get_player_name_by_id(player_id):
+    player = Player.query.get(player_id)
+    return player.name if player else "Unknown"

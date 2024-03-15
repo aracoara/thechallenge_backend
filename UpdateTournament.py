@@ -1,4 +1,4 @@
-from tennis_app.models import Tournament, Player
+from tennis_app.models import Tournament
 from tennis_app import app
 from tennis_app.extensions import db
 
@@ -24,9 +24,11 @@ def add_or_update_tournaments_in_database(tournament_data):
 
 ## Status possíveis do torneio: Open, On Progress, Closed
 tournament_data = [
-    {"name": "Rio Open", "short_name": "RIO", "year": 2024, "status": "Open"},
+    {"name": "Rio Open", "short_name": "RIO", "year": 2024, "status": "Closed"},
     {"name": "Australian Open", "short_name": "AO", "year": 2024, "status": "On Progress"},
     {"name": "Wimbledon", "short_name": "WB", "year": 2023, "status": "Closed"},
+    {"name": "Iate 3º Classe", "short_name": "IATE3", "year": 2024, "status": "Closed"},
+    {"name": "Indian Wells", "short_name": "IW", "year": 2024, "status": "Open"}
 ]
 
 if __name__ == '__main__':

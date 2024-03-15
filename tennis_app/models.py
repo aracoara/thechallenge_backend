@@ -46,48 +46,66 @@ class Player(db.Model):
         return f'<Player {self.name}, Country: {self.country}, seed: {self.seed},QF_number: {self.qf_number}>'
     
 class RoundType(Enum):
+    R132 = 'R132'
+    R64 = 'R64'
+    R32 = 'R32'
+    R16 = 'R16'
     QF = 'QF'
     SF = 'SF'
     F = 'F'
 
     def __str__(self):
         return self.value
+    
+class Round(db.Model):
+    __tablename__ = 'rounds'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False, unique=True)
+    games = db.relationship('Game', back_populates='round', lazy=True)
+
+
+    def __repr__(self):
+        return f'<Round {self.name}>'    
 
 
 class Game(db.Model):
     __tablename__ = 'games'
     id = db.Column(db.Integer, primary_key=True)
-    round = db.Column(db.Enum(RoundType), nullable=False)
-    player1_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)  # Corrigido para 'players.id'
-    player2_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)  # Corrigido para 'players.id'
-    winner_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=True)    # Corrigido para 'players.id'
+    round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'), nullable=False)  
+    player1_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    player2_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    winner_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Adicionando user_id
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
 
+    round = db.relationship('Round', back_populates='games')
     player1 = db.relationship('Player', foreign_keys=[player1_id], backref='games_as_player1')
     player2 = db.relationship('Player', foreign_keys=[player2_id], backref='games_as_player2')
     winner = db.relationship('Player', foreign_keys=[winner_id], backref='won_games')
-    tournament = db.relationship('Tournament', backref='games')
+    tournament = db.relationship('Tournament', back_populates='games')
+    user = db.relationship('User', back_populates='games')
 
     def __repr__(self):
-        round_name = self.round.name if isinstance(self.round, Enum) else self.round
-        return f'<Game {self.id} - Round: {round_name}, Player 1: {self.player1_id}, Player 2: {self.player2_id}, Winner: {self.winner_id}>' 
+        return f'<Game {self.id} - Round ID: {self.round_id}, Winner ID: {self.winner_id}>'
 
+    
 class Pick(db.Model):
     __tablename__ = 'picks'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))  # Corrigido para 'users.id'
-    game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
-    winner_id = db.Column(db.Integer, db.ForeignKey('players.id'))  # Certifique-se de que 'players.id' esteja correto
-    player1_id = db.Column(db.Integer)
-    player2_id = db.Column(db.Integer)
-    round = db.Column(db.Enum(RoundType))
-    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'))
-    
-    game = db.relationship('Game', foreign_keys=[game_id], backref='picks')
+    position = db.Column(db.String, nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
+    # round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Ajuste aqui
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
+
+    game = db.relationship('Game', backref='picks', lazy=True)
     tournament = db.relationship('Tournament', backref='picks')
+    user = db.relationship('User', back_populates='picks') 
 
     def __repr__(self):
-        return f"<Pick - User: {self.user_id}, Game: {self.game_id}, Round: {self.round.name}, Player 1: {self.player1_id}, Player 2: {self.player2_id}, Winner: {self.winner_id}>"
+        return f'<Pick {self.id} - Position: {self.position}, Player ID: {self.player_id}, Game ID: {self.game_id}, User ID: {self.user_id}, Tournament ID: {self.tournament_id}>'
+
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -95,7 +113,8 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    picks = db.relationship('Pick', backref='user', lazy='dynamic')
+    picks = db.relationship('Pick', back_populates='user', lazy='dynamic')
+    games = db.relationship('Game', back_populates='user', lazy='dynamic')
 
     def get_reset_token(self, expires_sec=1800):
         print("Tipo da SECRET_KEY:", type(app.config['SECRET_KEY']))
@@ -156,6 +175,7 @@ class Tournament(db.Model):
     short_name = db.Column(db.String(20), nullable=False)  # Nome reduzido para o torneio
     year = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(50), nullable=False) # Status do torneio (ex: 'Open', 'On Progress', 'Closed')
+    games = db.relationship('Game', back_populates='tournament')
 
     @validates('status')
     def validate_status(self, key, status):

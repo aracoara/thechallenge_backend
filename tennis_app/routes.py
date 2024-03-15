@@ -1,5 +1,5 @@
 # routes.py
-#  
+#
 from flask import jsonify, render_template, request, json, url_for, abort
 from flask_mail import Message
 from flask_login import login_user, logout_user
@@ -8,12 +8,19 @@ from werkzeug.security import check_password_hash
 from tennis_app import app, mail
 from werkzeug.security import generate_password_hash
 from tennis_app.extensions import db
-from tennis_app.models import Player, Game, User, Pontuacoes, Tournament, Pick
-from tennis_app.utils import ( get_and_process_picks, session_scope, delete_existing_games, create_and_save_games, create_or_update_picks,
-                              process_results_data_position, create_all_games, ResultsPositionTournament)
+from tennis_app.models import Player, Game, User, Pontuacoes, Tournament, Pick, Round
+from tennis_app.utils import ( extract_picks_with_game_id, process_picks_and_generate_games, ResultsPositionTournament, get_user_name_by_id, get_player_name_by_id)
 import pandas as pd
 from flask_mail import Message
 from flask_wtf.csrf import generate_csrf
+from sqlalchemy.exc import IntegrityError
+import logging
+# Rota para enviar os picks de um participante
+from sqlalchemy.orm.exc import NoResultFound
+
+# Configuração de Logging
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
 
 
 # Configuração do Serializer para gerar o token
@@ -21,11 +28,7 @@ s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 
 print("Definindo rotas...")
-# Rota para obter todos os jogadores
-@app.route('/players', methods=['GET'])
-def get_players():
-    players = Player.query.all()
-    return jsonify([player.to_dict() for player in players])
+
 
 @app.route('/players/<short_name>/<int:year>', methods=['GET'])
 def get_players_by_tournament(short_name, year):
@@ -40,10 +43,9 @@ def get_players_by_tournament(short_name, year):
     return jsonify([player.to_dict() for player in players])
 
 
-# Rota para enviar os picks de um participante
+
 @app.route('/submit_picks_tournaments/<short_name>/<int:year>', methods=['POST'])
 def submit_picks_tournaments(short_name, year):
-    # Buscar o torneio pelo short_name e year
     tournament = Tournament.query.filter_by(short_name=short_name, year=year).first()
     if not tournament:
         return jsonify({"error": "Torneio não encontrado"}), 404
@@ -57,23 +59,75 @@ def submit_picks_tournaments(short_name, year):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    # Executa a lógica principal de processamento dentro de um escopo de sessão gerenciado
-    try:
-        with session_scope():
-            # Limpa todos os jogos e picks existentes (opcional)
-            delete_existing_games()
-            
-            # Cria novos jogos com base nos dados fornecidos
-            all_games = create_all_games(data)
-            create_and_save_games(all_games)
-            
-            # Cria ou atualiza picks com base nos jogos criados
-            create_or_update_picks(user, Game.query.all())
+    # Apagar registros antigos para evitar duplicidade
+    Pick.query.filter_by(user_id=user_id, tournament_id=tournament.id).delete()
+    Game.query.filter_by(user_id=user_id, tournament_id=tournament.id).delete()
+
+    # Processar os novos picks e games
+    picks_list = extract_picks_with_game_id(data, user_id, tournament.id)
+    games_data = process_picks_and_generate_games(data, user_id, tournament.id)
+
+    # Inserir novos picks e games no DB
+    for pick in picks_list:
+        db.session.add(Pick(**pick))
+    
+    games_objects = []
+    for game in games_data:
+        game_obj = Game(**game)
+        db.session.add(game_obj)
+        games_objects.append(game_obj)
+
+    db.session.flush()  # Para obter IDs dos games inseridos
+    
+    # Associar game_id corretamente aos picks após games serem inseridos
+    for pick in picks_list:
+        pick_obj = Pick.query.filter_by(
+            position=pick['position'],
+            user_id=user_id,
+            tournament_id=tournament.id
+        ).first()
         
-        return jsonify({'message': 'Picks submitted successfully'}), 200
+        if pick_obj:
+            game_obj = next((g for g in games_objects if g.round_id == pick['round_id'] and 
+                             g.player1_id == pick['player_id'] or g.player2_id == pick['player_id']), None)
+            
+            if game_obj:
+                pick_obj.game_id = game_obj.id
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Picks and games submitted successfully'}), 200
     except Exception as e:
-        # Como session_scope() já lida com rollback, aqui tratamos apenas o feedback do erro
-        return jsonify({'error': f'Failed to process submission: {e}'}), 500
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/PicksOverview/<short_name>/<int:year>', methods=['GET'])
+def picks_overview_by_tournament(short_name, year):
+    with app.app_context():
+        tournament = Tournament.query.filter_by(short_name=short_name, year=year).first()
+        if not tournament:
+            return jsonify({"error": "Torneio não encontrado"}), 404
+
+        picks = Pick.query.filter_by(tournament_id=tournament.id).all()
+        picks_output = []
+
+        # Organize picks by user
+        picks_by_user = {}
+        for pick in picks:
+            user_id = pick.user_id
+            if user_id not in picks_by_user:
+                picks_by_user[user_id] = []
+            picks_by_user[user_id].append(pick)
+
+        for user_id, user_picks in picks_by_user.items():
+            user_output = {"User": get_user_name_by_id(user_id), "tournament_id": tournament.id}
+            for pick in user_picks:
+                player_name = get_player_name_by_id(pick.player_id)
+                user_output[pick.position] = player_name
+            picks_output.append(user_output)
+
+        return jsonify(picks_output)
 
 @app.route('/pontuacoes/<short_name>/<int:year>/<rodada>', methods=['GET'])
 def get_pontuacoes_por_rodada_torneio(short_name, year, rodada):
@@ -118,63 +172,7 @@ def to_dict(self):
 # Adicionando o método to_dict à classe Pontuacoes
 Pontuacoes.to_dict = to_dict
 
-# Rota para obter os Picks de todos os usuários
-@app.route('/api/PicksOverview', methods=['GET'])
-def picks_overview():
-    # Chama a função para obter o DataFrame com os picks processados
-    df_picks = get_and_process_picks()
-    # Converte o DataFrame para JSON
-    picks_json = df_picks.to_json(orient='records')
-    # Converte a string JSON para um objeto Python
-    picks_data = json.loads(picks_json)
 
-    # Retorna a resposta JSON
-    return jsonify(picks_data)
-
-@app.route('/PicksOverview/<short_name>/<int:year>', methods=['GET'])
-def get_picks_overview_tournament(short_name, year):
-    with app.app_context():
-        tournament = Tournament.query.filter_by(short_name=short_name, year=year).first()
-        if not tournament:
-            return jsonify({"error": "Torneio não encontrado"}), 404
-
-        picks = Pick.query.filter_by(tournament_id=tournament.id).all()
-
-        users_dict = {}
-        for pick in picks:
-            user = User.query.get(pick.user_id)
-            player1 = Player.query.get(pick.player1_id)
-            player2 = Player.query.get(pick.player2_id)
-            winner = Player.query.get(pick.winner_id)
-
-            if user.username not in users_dict:
-                users_dict[user.username] = {
-                    'User': user.username,
-                    'tournament_id': tournament.id,
-                    'QF1': None, 'QF2': None, 'QF3': None, 'QF4': None,
-                    'QF5': None, 'QF6': None, 'QF7': None, 'QF8': None,
-                    'SF1': None, 'SF2': None, 'SF3': None, 'SF4': None,
-                    'F1': None, 'F2': None, 'Champion': None
-                }
-
-            # Correção para atribuição das semifinais SF2 e SF4
-            if pick.game_id in [5, 6]:  # Semifinais
-                sf_index = 'SF1' if pick.game_id == 5 else 'SF3'
-                sf_opponent_index = 'SF2' if pick.game_id == 5 else 'SF4'
-                users_dict[user.username][sf_index] = player1.name if player1 else None
-                users_dict[user.username][sf_opponent_index] = player2.name if player2 else None
-
-            elif pick.game_id == 7:  # Final
-                users_dict[user.username]['F1'] = player1.name if player1 else None
-                users_dict[user.username]['F2'] = player2.name if player2 else None
-                users_dict[user.username]['Champion'] = winner.name if winner else None
-            else:  # Quartas de Final
-                qf_index_1, qf_index_2 = 'QF' + str((pick.game_id - 1) * 2 + 1), 'QF' + str((pick.game_id - 1) * 2 + 2)
-                users_dict[user.username][qf_index_1] = player1.name if player1 else None
-                users_dict[user.username][qf_index_2] = player2.name if player2 else None
-
-        processed_picks_list = list(users_dict.values())
-        return jsonify(processed_picks_list)
 
 @app.route('/classified-players/<short_name>/<int:year>', methods=['GET'])
 def classified_players_tournament(short_name, year):
@@ -194,7 +192,15 @@ def classified_players_tournament(short_name, year):
                 "F": 'tennis_app/assets/RIO2024/RIO-2024-Results - F.csv',
                 "Champion": 'tennis_app/assets/RIO2024/RIO-2024-Results - Champion.csv',
             }
-        }
+        },
+        'IW': {
+            2024: {
+                "QF": 'tennis_app/assets/IW2024/IW-2024-Results - QF.csv',
+                "SF": 'tennis_app/assets/IW2024/IW-2024-Results - SF.csv',
+                "F": 'tennis_app/assets/IW2024/IW-2024-Results - F.csv',
+                "Champion": 'tennis_app/assets/IW2024/IW-2024-Results - Champion.csv',
+            }
+        },
     }
 
     paths = file_paths[short_name][year]
@@ -219,47 +225,6 @@ def classified_players_tournament(short_name, year):
 
     return jsonify(result_dict)
 
-# Rota para obter os jogadores classificados
-@app.route('/api/classified-players', methods=['GET'])
-def classified_players():
-    # Corrigindo a definição do dicionário file_paths
-    file_paths = {
-        'QF': 'tennis_app/assets/QF-ao24_v2.csv',
-        'SF': 'tennis_app/assets/SF-ao24_v2.csv',
-        'F': 'tennis_app/assets/F-ao24_v2.csv',
-        'Champion': 'tennis_app/assets/Champion-ao24_v2.csv'
-    }
-
-    # Processa os dados para cada fase
-    # Assegurando que process_results_data_position retorna DataFrames
-    df_classified_players_QF = process_results_data_position(file_paths['QF'])
-    df_classified_players_SF = process_results_data_position(file_paths['SF'])
-    df_classified_players_F = process_results_data_position(file_paths['F'])
-    df_classified_players_Champion = process_results_data_position(file_paths['Champion'])
-
-    # Concatenar os DataFrames
-    frames = [df_classified_players_QF, df_classified_players_SF, df_classified_players_F, df_classified_players_Champion]
-    df_concatenated = pd.concat(frames)
-
-    with app.app_context():
-        player_ids = df_concatenated['player_id'].dropna().unique().astype(int).tolist()
-        player_names_dict = {}
-            
-        for player_id in player_ids:
-            # Busca cada jogador individualmente
-            player = db.session.query(Player).filter(Player.id == player_id).first()
-            if player:
-                player_names_dict[player_id] = player.name
-        
-        # Mapeia os player_id para nomes usando o dicionário criado
-        df_concatenated['Jogadores'] = df_concatenated['player_id'].map(player_names_dict)
-
-    # Preparando o DataFrame para retorno JSON
-    df_classified_players = df_concatenated[['Position', 'Jogadores']].rename(columns={'Position': 'Posição'})
-    output_dict = pd.Series(df_classified_players.Jogadores.values,index=df_classified_players.Posição).to_dict()
-
-    # Retorna os dados como JSON
-    return jsonify(output_dict)
 
 # Rota para o login
 @app.route('/api/login', methods=['POST'])
@@ -308,7 +273,10 @@ def reset_password():
 
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
     token = serializer.dumps(email, salt='email-reset-salt')
+    ## O token é enviado por e-mail
+    # reset_url = f'https://solino.pythonanywhere.com/reset_password/{token}'
     reset_url = f'http://localhost:3000/reset_password/{token}'
+
 
     # Assuming you have a function to send emails
     send_reset_email(email, reset_url)
@@ -391,11 +359,15 @@ def get_tournaments():
     pdf_paths = {
         1: '/AO24_v2.pdf',
         2: '/RIO24.pdf',
+        3: '/IW24.pdf',
+        5: '/IATE3_2024.pdf'
     }
 
     whatsapp_paths = {
         1: 'https://chat.whatsapp.com/J6A2yZPyTAy34LB4nk4Aqy',
         2: 'https://chat.whatsapp.com/LXJ6gTVP4nuDGJqhpt36uY',
+        3: 'https://discord.com/channels/1203007430544465940/1218210454032351324',
+        5: 'https://chat.whatsapp.com/BmB60wLYNibCpj7q293uCv'
     }
     
     tournaments_info = [{
